@@ -1,6 +1,7 @@
 package cryptopals
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 )
@@ -24,5 +25,18 @@ func TestToBase64(t *testing.T) {
 		if actual != tt.expected {
 			t.Errorf("Expected %q, got %q", tt.expected, actual)
 		}
+	}
+}
+
+func TestFixedXor(t *testing.T) {
+	l := strings.NewReader("1c0111001f010100061a024b53535009181c")
+	r := strings.NewReader("686974207468652062756c6c277320657965")
+	actual, err := FixedXor(l, r)
+	if err != nil {
+		t.Errorf("Error while %q xor %q: %v", l, r, err)
+	}
+	expected := []byte("746865206b696420646f6e277420706c6179")
+	if !bytes.Equal(actual, expected) {
+		t.Errorf("Expected %q, got %q", expected, actual)
 	}
 }

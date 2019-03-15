@@ -2,6 +2,7 @@ package cryptopals
 
 import (
 	"encoding/hex"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -53,4 +54,49 @@ func ToBase64String(r io.Reader) (string, error) {
 	}
 
 	return b.String(), nil
+}
+
+// FixedXor returns hexadecimal string represents xor operation on bytes read by given readers.
+//
+// The bytes read by the readers are expected to be hexadecimal strings of the same size.
+// Returns an error if the input is not of the same size or any error encountered while decoding.
+func FixedXor(l, r io.Reader) ([]byte, error) {
+	src, err := decodeHexToBytes(l)
+	if err != nil {
+		return nil, err
+	}
+
+	rb, err := decodeHexToBytes(r)
+	if err != nil {
+		return nil, err
+	}
+	if len(src) != len(rb) {
+		return nil, fmt.Errorf("arguments (%q, %q)must have the same size", src, rb)
+	}
+
+	for i := range src {
+		src[i] ^= rb[i]
+	}
+
+	dst := make([]byte, hex.EncodedLen(len(src)))
+	hex.Encode(dst, src)
+	return dst, nil
+}
+
+func decodeHexToBytes(r io.Reader) ([]byte, error) {
+	d := hex.NewDecoder(r)
+	s := make([]byte, 256)
+	var res []byte
+	for {
+		n, err := d.Read(s)
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, s[:n]...)
+	}
+	return res, nil
 }
