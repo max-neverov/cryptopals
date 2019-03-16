@@ -46,8 +46,8 @@ func TestSingleByteXorDecipher(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error while decipher %v", err)
 	}
-	expected := "Cooking MC's like a pound of bacon"
-	if actual != expected {
-		t.Errorf("Expected %q got %q", expected, actual)
+	expected := []byte("Cooking MC's like a pound of bacon")
+	if !bytes.Equal(actual.Sentence, expected) {
+		t.Errorf("Expected %q got %q", expected, actual.Sentence)
 	}
 }

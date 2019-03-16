@@ -44,6 +44,12 @@ var freqs = map[int32]float64{
 	'z':  0.00074,
 }
 
+// DecodeResult holds result of decoding: a sentence and its rate based on char frequencies
+type DecodeResult struct {
+	Rate     float64
+	Sentence []byte
+}
+
 // ToBase64 encodes bytes read by given reader and returns base64 encoded string.
 //
 // The bytes read by the reader are expected to be hexadecimal string.
@@ -120,17 +126,13 @@ func FixedXor(l, r io.Reader) ([]byte, error) {
 
 // SingleByteXorDecipher decodes given byte stream by using xor with a single
 // char from `base64Table` and calculating max sentence rate by char frequencies
-func SingleByteXorDecipher(r io.Reader) (string, error) {
+func SingleByteXorDecipher(r io.Reader) (*DecodeResult, error) {
 	bs, err := decodeHexToBytes(r)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	type decodeResult struct {
-		fr float64
-		bs []byte
-	}
-	ch := make(chan decodeResult)
+	ch := make(chan DecodeResult)
 	var wg sync.WaitGroup
 
 	// decode mutates input slice of bytes
@@ -148,7 +150,7 @@ func SingleByteXorDecipher(r io.Reader) (string, error) {
 			}
 		}
 
-		ch <- decodeResult{fr, in}
+		ch <- DecodeResult{fr, in}
 	}
 
 	for i := range base64Table {
@@ -164,12 +166,12 @@ func SingleByteXorDecipher(r io.Reader) (string, error) {
 	rate := -1.0
 	var resBytes []byte
 	for r := range ch {
-		if rate < r.fr {
-			rate = r.fr
-			resBytes = r.bs
+		if rate < r.Rate {
+			rate = r.Rate
+			resBytes = r.Sentence
 		}
 	}
-	return string(resBytes), nil
+	return &DecodeResult{rate, resBytes}, nil
 }
 
 func decodeHexToBytes(r io.Reader) ([]byte, error) {
