@@ -1,6 +1,8 @@
 package cryptopals
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -169,6 +171,25 @@ func SingleByteXorDecipher(r io.Reader) (*DecodeResult, error) {
 		if rate < r.Rate {
 			rate = r.Rate
 			resBytes = r.Sentence
+		}
+	}
+	return &DecodeResult{rate, resBytes}, nil
+}
+
+func DetectSingleCharacterXor(r io.Reader) (*DecodeResult, error) {
+	scanner := bufio.NewScanner(r)
+	scanner.Split(bufio.ScanLines)
+
+	rate := -1.0
+	var resBytes []byte
+	for scanner.Scan() {
+		res, err := SingleByteXorDecipher(bytes.NewReader(scanner.Bytes()))
+		if err != nil {
+			return nil, fmt.Errorf("reading error: %v", err)
+		}
+		if rate < res.Rate {
+			rate = res.Rate
+			resBytes = res.Sentence
 		}
 	}
 	return &DecodeResult{rate, resBytes}, nil

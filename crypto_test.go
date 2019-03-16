@@ -2,6 +2,7 @@ package cryptopals
 
 import (
 	"bytes"
+	"os"
 	"strings"
 	"testing"
 )
@@ -47,6 +48,22 @@ func TestSingleByteXorDecipher(t *testing.T) {
 		t.Errorf("Error while decipher %v", err)
 	}
 	expected := []byte("Cooking MC's like a pound of bacon")
+	if !bytes.Equal(actual.Sentence, expected) {
+		t.Errorf("Expected %q got %q", expected, actual.Sentence)
+	}
+}
+
+func TestDetectSingleCharacterXor(t *testing.T) {
+	in, err := os.Open("resources/challenge4.txt")
+	if err != nil {
+		t.Errorf("Error while decipher %v", err)
+	}
+	defer in.Close()
+	actual, err := DetectSingleCharacterXor(in)
+	if err != nil {
+		t.Errorf("Error while decipher file challenge4.txt: %v", err)
+	}
+	expected := []byte("Now that the party is jumping\n")
 	if !bytes.Equal(actual.Sentence, expected) {
 		t.Errorf("Expected %q got %q", expected, actual.Sentence)
 	}
