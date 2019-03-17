@@ -176,6 +176,9 @@ func SingleByteXorDecipher(r io.Reader) (*DecodeResult, error) {
 	return &DecodeResult{rate, resBytes}, nil
 }
 
+// DetectSingleCharacterXor reads from given reader line by line and apply single xor
+// with chars from `base64Table`.
+// DetectSingleCharacterXor returns the line with the highest rating
 func DetectSingleCharacterXor(r io.Reader) (*DecodeResult, error) {
 	scanner := bufio.NewScanner(r)
 	scanner.Split(bufio.ScanLines)
@@ -193,6 +196,37 @@ func DetectSingleCharacterXor(r io.Reader) (*DecodeResult, error) {
 		}
 	}
 	return &DecodeResult{rate, resBytes}, nil
+}
+
+// EncodeWithRepeatingXor reads from given reader by chunks of length 256 and encodes
+// bytes with circular repeating xor with given key and returns hex representation of
+// the result.
+// EncodeWithRepeatingXor encodes all characters including non printing like '\n'.
+func EncodeWithRepeatingXor(key []byte, r io.Reader) ([]byte, error) {
+	br := bufio.NewReader(r)
+	var res []byte
+	var keyIdx int
+	lk := len(key)
+	p := make([]byte, 256)
+	for {
+		l, err := br.Read(p)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		for i := 0; i < l; i++ {
+			p[i] ^= key[keyIdx]
+			keyIdx = (keyIdx + 1) % lk
+		}
+		dst := make([]byte, hex.EncodedLen(l))
+		_ = hex.Encode(dst, p[:l])
+		res = append(res, dst...)
+	}
+
+	return res, nil
 }
 
 func decodeHexToBytes(r io.Reader) ([]byte, error) {
