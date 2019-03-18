@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math/bits"
 	"strings"
 	"sync"
 	"unicode"
@@ -226,6 +227,21 @@ func EncodeWithRepeatingXor(key []byte, r io.Reader) ([]byte, error) {
 		res = append(res, dst...)
 	}
 
+	return res, nil
+}
+
+// HammingDistance counts different bits of the given two byte slices.
+// Slices must be of the same size.
+func HammingDistance(s1, s2 []byte) (int, error) {
+	if len(s1) != len(s2) {
+		return -1, fmt.Errorf("slices must be of the same size, was %d (%q) and %d (%q)", len(s1), s1, len(s2), s2)
+	}
+	var b byte
+	var res int
+	for i := 0; i < len(s1); i++ {
+		b = s1[i] ^ s2[i]
+		res += bits.OnesCount8(b)
+	}
 	return res, nil
 }
 

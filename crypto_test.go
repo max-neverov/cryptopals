@@ -83,3 +83,16 @@ func TestEncodeWithRepeatingXor(t *testing.T) {
 		t.Errorf("Expected %q got %q", expected, actual)
 	}
 }
+
+func TestEditDistance(t *testing.T) {
+	expected := 37
+	actual, err := HammingDistance([]byte("this is a test"), []byte("wokka wokka!!!"))
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if actual != expected {
+		t.Errorf("Expected distance 37 got %d", actual)
+	}
+}
