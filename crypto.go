@@ -101,11 +101,11 @@ func ToBase64String(r io.Reader) (string, error) {
 	return b.String(), nil
 }
 
-// FixedXor returns hexadecimal string represents xor operation on bytes read by given readers.
+// EncodeFixedXor returns hexadecimal string represents xor operation on bytes read by given readers.
 //
 // The bytes read by the readers are expected to be hexadecimal strings of the same size.
 // Returns an error if the input is not of the same size or any error encountered while decoding.
-func FixedXor(l, r io.Reader) ([]byte, error) {
+func EncodeFixedXor(l, r io.Reader) ([]byte, error) {
 	src, err := decodeHexToBytes(l)
 	if err != nil {
 		return nil, err
@@ -128,9 +128,9 @@ func FixedXor(l, r io.Reader) ([]byte, error) {
 	return dst, nil
 }
 
-// SingleByteXorDecipher decodes given byte stream by using xor with a single
+// DecodeSingleByteXor decodes given byte stream by using xor with a single
 // char from `base64Table` and calculating max sentence rate by char frequencies
-func SingleByteXorDecipher(r io.Reader) (*DecodeResult, error) {
+func DecodeSingleByteXor(r io.Reader) (*DecodeResult, error) {
 	bs, err := decodeHexToBytes(r)
 	if err != nil {
 		return nil, err
@@ -188,7 +188,7 @@ func DetectSingleCharacterXor(r io.Reader) (*DecodeResult, error) {
 	rate := -1.0
 	var resBytes []byte
 	for scanner.Scan() {
-		res, err := SingleByteXorDecipher(bytes.NewReader(scanner.Bytes()))
+		res, err := DecodeSingleByteXor(bytes.NewReader(scanner.Bytes()))
 		if err != nil {
 			return nil, fmt.Errorf("reading error: %v", err)
 		}

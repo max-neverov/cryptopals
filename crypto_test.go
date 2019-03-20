@@ -30,10 +30,10 @@ func TestToBase64(t *testing.T) {
 	}
 }
 
-func TestFixedXor(t *testing.T) {
+func TestEncodeFixedXor(t *testing.T) {
 	l := strings.NewReader("1c0111001f010100061a024b53535009181c")
 	r := strings.NewReader("686974207468652062756c6c277320657965")
-	actual, err := FixedXor(l, r)
+	actual, err := EncodeFixedXor(l, r)
 	if err != nil {
 		t.Errorf("Error while %q xor %q: %v", l, r, err)
 	}
@@ -43,8 +43,8 @@ func TestFixedXor(t *testing.T) {
 	}
 }
 
-func TestSingleByteXorDecipher(t *testing.T) {
-	actual, err := SingleByteXorDecipher(strings.NewReader("1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"))
+func TestDecodeSingleByteXor(t *testing.T) {
+	actual, err := DecodeSingleByteXor(strings.NewReader("1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"))
 	if err != nil {
 		t.Errorf("Error while decipher %v", err)
 	}
