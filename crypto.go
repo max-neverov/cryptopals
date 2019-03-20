@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"math/bits"
+	"sort"
 	"strings"
 	"sync"
 	"unicode"
@@ -243,6 +244,77 @@ func HammingDistance(s1, s2 []byte) (int, error) {
 		res += bits.OnesCount8(b)
 	}
 	return res, nil
+}
+
+type hammingDistance struct {
+	distance float32
+	keySize  int
+	err      error
+}
+
+type hammingDistances []hammingDistance
+
+func (a hammingDistances) Len() int           { return len(a) }
+func (a hammingDistances) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a hammingDistances) Less(i, j int) bool { return a[i].distance < a[j].distance }
+
+func FindKeySize(bs []byte) ([]int, error) {
+	var wg sync.WaitGroup
+	ch := make(chan hammingDistance)
+	dst := make([]byte, hex.DecodedLen(len(bs)))
+	_, err := hex.Decode(dst, bs)
+	if err != nil {
+		return nil, err
+	}
+	for i := 2; i < 42; i++ {
+		wg.Add(1)
+		go averageHammingDistance(dst, i, ch, &wg)
+	}
+
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	ds := make([]hammingDistance, 42)
+	for d := range ch {
+		if d.err != nil {
+			return nil, d.err
+		}
+		ds[d.keySize] = d
+	}
+	sort.Sort(hammingDistances(ds))
+
+	res := make([]int, 3)
+	for i := 2; i < 5; i++ {
+		res[i-2] = ds[i].keySize
+	}
+	return res, nil
+}
+
+func averageHammingDistance(bs []byte, keySize int, ch chan<- hammingDistance, wg *sync.WaitGroup) {
+	defer wg.Done()
+	// - 1 because we compare one keySize bytes with next, so the last comparison will be
+	// len(bs)/keySize - 1 bytes with len(bs)/keySize bytes
+	cnt := len(bs)/keySize - 1
+	if cnt < 2 {
+		// can't calculate average distance if bytes length less than two keySize
+		ch <- hammingDistance{float32(keySize), keySize, nil}
+		return
+	}
+	var sum float32
+	for i := 0; i < cnt; i++ {
+		l := i * keySize
+		m := (i + 1) * keySize
+		r := (i + 2) * keySize
+		d, err := HammingDistance(bs[l:m], bs[m:r])
+		if err != nil {
+			ch <- hammingDistance{-1, keySize, err}
+			return
+		}
+		sum += float32(d) / float32(keySize)
+	}
+	ch <- hammingDistance{sum / float32(cnt), keySize, nil}
 }
 
 func decodeHexToBytes(r io.Reader) ([]byte, error) {

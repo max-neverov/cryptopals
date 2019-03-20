@@ -96,3 +96,47 @@ func TestEditDistance(t *testing.T) {
 		t.Errorf("Expected distance 37 got %d", actual)
 	}
 }
+
+func TestFindKeySize(t *testing.T) {
+	s1 := fmt.Sprintf("Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal")
+
+	key1 := []byte("ICE")
+	in1, err := EncodeWithRepeatingXor(key1, strings.NewReader(s1))
+	if err != nil {
+		t.Errorf("Error while encoding: %v", err)
+	}
+
+	s2 := fmt.Sprintf("This is. A random\ntest string. Random English, sentence because I said so")
+
+	key2 := []byte("Random")
+	in2, err := EncodeWithRepeatingXor(key2, strings.NewReader(s2))
+	if err != nil {
+		t.Errorf("Error while encoding: %v", err)
+	}
+
+	keySizeTests := []struct {
+		in       []byte
+		expected int
+	}{
+		{in1, len(key1)},
+		{in2, len(key2)},
+	}
+
+	for _, tt := range keySizeTests {
+		sizes, err := FindKeySize(tt.in)
+		if err != nil {
+			t.Error(err)
+		}
+
+		found := false
+		for _, size := range sizes {
+			if size == tt.expected {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Expected key size %d, got %v", tt.expected, sizes)
+		}
+	}
+}
