@@ -52,6 +52,11 @@ var freqs = map[int32]float64{
 type DecodeResult struct {
 	Rate     float64
 	Sentence []byte
+	Key      byte
+}
+
+func (d *DecodeResult) String() string {
+	return fmt.Sprintf("Key=%c; rate=%f; sentence=%q\n", d.Key, d.Rate, d.Sentence)
 }
 
 // ToBase64 encodes bytes read by given reader and returns base64 encoded string.
@@ -140,13 +145,13 @@ func DecodeSingleByteXor(r io.Reader) (*DecodeResult, error) {
 	var wg sync.WaitGroup
 
 	// decode mutates input slice of bytes
-	decode := func(in []byte, b byte) {
+	decode := func(in []byte, key byte) {
 		defer wg.Done()
 
 		var fr = 0.0
 		var nonASCIICharPenalty = 0.05
 		for i := range in {
-			in[i] ^= b
+			in[i] ^= key
 			if v, ok := freqs[unicode.ToLower(int32(in[i]))]; !ok {
 				fr -= nonASCIICharPenalty
 			} else {
@@ -154,7 +159,7 @@ func DecodeSingleByteXor(r io.Reader) (*DecodeResult, error) {
 			}
 		}
 
-		ch <- DecodeResult{fr, in}
+		ch <- DecodeResult{fr, in, key}
 	}
 
 	for i := 32; i < 127; i++ {
@@ -169,13 +174,15 @@ func DecodeSingleByteXor(r io.Reader) (*DecodeResult, error) {
 
 	rate := -1.0
 	var resBytes []byte
+	var key byte
 	for r := range ch {
 		if rate < r.Rate {
 			rate = r.Rate
 			resBytes = r.Sentence
+			key = r.Key
 		}
 	}
-	return &DecodeResult{rate, resBytes}, nil
+	return &DecodeResult{rate, resBytes, key}, nil
 }
 
 // DetectSingleCharacterXor reads from given reader line by line and apply single xor
@@ -187,6 +194,7 @@ func DetectSingleCharacterXor(r io.Reader) (*DecodeResult, error) {
 
 	rate := -1.0
 	var resBytes []byte
+	var key byte
 	for scanner.Scan() {
 		res, err := DecodeSingleByteXor(bytes.NewReader(scanner.Bytes()))
 		if err != nil {
@@ -195,9 +203,10 @@ func DetectSingleCharacterXor(r io.Reader) (*DecodeResult, error) {
 		if rate < res.Rate {
 			rate = res.Rate
 			resBytes = res.Sentence
+			key = res.Key
 		}
 	}
-	return &DecodeResult{rate, resBytes}, nil
+	return &DecodeResult{rate, resBytes, key}, nil
 }
 
 // EncodeWithRepeatingXor reads from given reader by chunks of length 256 and encodes

@@ -141,7 +141,7 @@ func TestFindKeySize(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("Expected key size %d, got %v", tt.expected, sizes)
+			t.Errorf("Expected Key size %d, got %v", tt.expected, sizes)
 		}
 	}
 }
