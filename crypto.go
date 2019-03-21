@@ -223,9 +223,7 @@ func EncodeWithRepeatingXor(key []byte, r io.Reader) ([]byte, error) {
 			p[i] ^= key[keyIdx]
 			keyIdx = (keyIdx + 1) % lk
 		}
-		dst := make([]byte, hex.EncodedLen(l))
-		_ = hex.Encode(dst, p[:l])
-		res = append(res, dst...)
+		res = append(res, p[:l]...)
 	}
 
 	return res, nil
@@ -261,14 +259,10 @@ func (a hammingDistances) Less(i, j int) bool { return a[i].distance < a[j].dist
 func FindKeySize(bs []byte) ([]int, error) {
 	var wg sync.WaitGroup
 	ch := make(chan hammingDistance)
-	dst := make([]byte, hex.DecodedLen(len(bs)))
-	_, err := hex.Decode(dst, bs)
-	if err != nil {
-		return nil, err
-	}
+
 	for i := 2; i < 42; i++ {
 		wg.Add(1)
-		go averageHammingDistance(dst, i, ch, &wg)
+		go averageHammingDistance(bs, i, ch, &wg)
 	}
 
 	go func() {
