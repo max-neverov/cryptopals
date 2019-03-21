@@ -2,7 +2,6 @@ package cryptopals
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -133,14 +132,9 @@ func EncodeFixedXor(l, r io.Reader) ([]byte, error) {
 	return dst, nil
 }
 
-// DecodeSingleByteXor decodes given byte stream by using xor with a single
-// char from `base64Table` and calculating max sentence rate by char frequencies
-func DecodeSingleByteXor(r io.Reader) (*DecodeResult, error) {
-	bs, err := decodeHexToBytes(r)
-	if err != nil {
-		return nil, err
-	}
-
+// DecodeSingleByteXor decodes given bytes by using xor with a single ASCII
+// char from [32, 127] interval and calculating max sentence rate by char frequencies
+func DecodeSingleByteXor(bs []byte) (*DecodeResult, error) {
 	ch := make(chan DecodeResult)
 	var wg sync.WaitGroup
 
@@ -185,8 +179,8 @@ func DecodeSingleByteXor(r io.Reader) (*DecodeResult, error) {
 	return &DecodeResult{rate, resBytes, key}, nil
 }
 
-// DetectSingleCharacterXor reads from given reader line by line and apply single xor
-// with chars from `base64Table`.
+// DetectSingleCharacterXor reads from given reader line by line hex encoded bytes and apply single xor
+// with a single ASCII char from [32, 127] interval.
 // DetectSingleCharacterXor returns the line with the highest rating
 func DetectSingleCharacterXor(r io.Reader) (*DecodeResult, error) {
 	scanner := bufio.NewScanner(r)
@@ -196,7 +190,12 @@ func DetectSingleCharacterXor(r io.Reader) (*DecodeResult, error) {
 	var resBytes []byte
 	var key byte
 	for scanner.Scan() {
-		res, err := DecodeSingleByteXor(bytes.NewReader(scanner.Bytes()))
+		bs := scanner.Bytes()
+		dst := make([]byte, hex.DecodedLen(len(bs)))
+		if _, err := hex.Decode(dst, bs); err != nil {
+			return nil, fmt.Errorf("failed to decode %q: %v", bs, err)
+		}
+		res, err := DecodeSingleByteXor(dst)
 		if err != nil {
 			return nil, fmt.Errorf("reading error: %v", err)
 		}

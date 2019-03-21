@@ -45,7 +45,11 @@ func TestEncodeFixedXor(t *testing.T) {
 }
 
 func TestDecodeSingleByteXor(t *testing.T) {
-	actual, err := DecodeSingleByteXor(strings.NewReader("1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"))
+	in, err := hex.DecodeString("1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736")
+	if err != nil {
+		t.Errorf("Error while decoding input: %v", err)
+	}
+	actual, err := DecodeSingleByteXor(in)
 	if err != nil {
 		t.Errorf("Error while decipher %v", err)
 	}
