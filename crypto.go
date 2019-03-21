@@ -157,9 +157,9 @@ func DecodeSingleByteXor(r io.Reader) (*DecodeResult, error) {
 		ch <- DecodeResult{fr, in}
 	}
 
-	for i := range base64Table {
+	for i := 32; i < 127; i++ {
 		wg.Add(1)
-		go decode(append(bs[:0:0], bs...), base64Table[i])
+		go decode(append(bs[:0:0], bs...), byte(i))
 	}
 
 	go func() {
