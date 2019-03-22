@@ -2,6 +2,8 @@ package cryptopals
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -47,19 +49,18 @@ var freqs = map[int32]float64{
 	'z':  0.00074,
 }
 
-// DecodeResult holds result of decoding: a sentence and its rate based on char frequencies
-type DecodeResult struct {
+// DecodeSingleByteXorResult holds result of decoding: a sentence and its rate based on char frequencies and the key it was encoded
+type DecodeSingleByteXorResult struct {
 	Rate     float64
 	Sentence []byte
 	Key      byte
 }
 
-func (d *DecodeResult) String() string {
+func (d *DecodeSingleByteXorResult) String() string {
 	return fmt.Sprintf("Key=%c; rate=%f; sentence=%q\n", d.Key, d.Rate, d.Sentence)
 }
 
 // ToBase64 encodes bytes read by given reader and returns base64 encoded string.
-//
 // The bytes read by the reader are expected to be hexadecimal string.
 func ToBase64String(r io.Reader) (string, error) {
 	s := make([]byte, 3)
@@ -134,8 +135,8 @@ func EncodeFixedXor(l, r io.Reader) ([]byte, error) {
 
 // DecodeSingleByteXor decodes given bytes by using xor with a single ASCII
 // char from [32, 127] interval and calculating max sentence rate by char frequencies
-func DecodeSingleByteXor(bs []byte) (*DecodeResult, error) {
-	ch := make(chan DecodeResult)
+func DecodeSingleByteXor(bs []byte) (*DecodeSingleByteXorResult, error) {
+	ch := make(chan DecodeSingleByteXorResult)
 	var wg sync.WaitGroup
 
 	// decode mutates input slice of bytes
@@ -153,7 +154,7 @@ func DecodeSingleByteXor(bs []byte) (*DecodeResult, error) {
 			}
 		}
 
-		ch <- DecodeResult{fr, in, key}
+		ch <- DecodeSingleByteXorResult{fr, in, key}
 	}
 
 	for i := 32; i < 127; i++ {
@@ -176,13 +177,13 @@ func DecodeSingleByteXor(bs []byte) (*DecodeResult, error) {
 			key = r.Key
 		}
 	}
-	return &DecodeResult{rate, resBytes, key}, nil
+	return &DecodeSingleByteXorResult{rate, resBytes, key}, nil
 }
 
-// DetectSingleCharacterXor reads from given reader line by line hex encoded bytes and apply single xor
+// DetectSingleCharacterXor reads from given reader line by line hex encoded bytes and apply xor
 // with a single ASCII char from [32, 127] interval.
-// DetectSingleCharacterXor returns the line with the highest rating
-func DetectSingleCharacterXor(r io.Reader) (*DecodeResult, error) {
+// DecodeSingleCharacterXor returns the decoded line with the highest rating and the key it was encoded
+func DecodeSingleCharacterXor(r io.Reader) (*DecodeSingleByteXorResult, error) {
 	scanner := bufio.NewScanner(r)
 	scanner.Split(bufio.ScanLines)
 
@@ -205,12 +206,11 @@ func DetectSingleCharacterXor(r io.Reader) (*DecodeResult, error) {
 			key = res.Key
 		}
 	}
-	return &DecodeResult{rate, resBytes, key}, nil
+	return &DecodeSingleByteXorResult{rate, resBytes, key}, nil
 }
 
-// EncodeWithRepeatingXor reads from given reader by chunks of length 256 and encodes
-// bytes with circular repeating xor with given key and returns hex representation of
-// the result.
+// EncodeWithRepeatingXor reads from given reader by chunks of length 256 and returns encoded
+// bytes with circular repeating xor with given key.
 // EncodeWithRepeatingXor encodes all characters including non printing like '\n'.
 func EncodeWithRepeatingXor(key []byte, r io.Reader) ([]byte, error) {
 	br := bufio.NewReader(r)
@@ -264,6 +264,8 @@ func (a hammingDistances) Len() int           { return len(a) }
 func (a hammingDistances) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a hammingDistances) Less(i, j int) bool { return a[i].distance < a[j].distance }
 
+// FindKeySize calculates Hamming distance between chunks of the given slice of different length [2; 42).
+// FindKeySize returns 3 chunk sizes with the least Hamming distance.
 func FindKeySize(bs []byte) ([]int, error) {
 	var wg sync.WaitGroup
 	ch := make(chan hammingDistance)
@@ -292,6 +294,69 @@ func FindKeySize(bs []byte) ([]int, error) {
 		res[i-2] = ds[i].keySize
 	}
 	return res, nil
+}
+
+type DecodeRepeatingXorResult struct {
+	Key      []byte
+	Sentence []byte
+}
+
+func DecodeRepeatingXor(r io.Reader) (*DecodeRepeatingXorResult, error) {
+	scanner := bufio.NewScanner(r)
+	scanner.Split(bufio.ScanLines)
+
+	var bs []byte
+	for scanner.Scan() {
+		bs = append(bs, scanner.Bytes()...)
+	}
+
+	dst := make([]byte, base64.StdEncoding.DecodedLen(len(bs)))
+	if _, err := base64.StdEncoding.Decode(dst, bs); err != nil {
+		return nil, fmt.Errorf("failed to base64 decode %q: %v", bs, err)
+	}
+
+	ks, err := FindKeySize(dst)
+	if err != nil {
+		return nil, err
+	}
+
+	var theKey []byte
+	max := 0.0
+	for i := range ks {
+		keySize := ks[i]
+		s := make([][]byte, keySize)
+		// transpose the blocks: makes a block that is the first byte of every block,
+		// and a block that is the second byte of every block, and so on
+		for i := 0; i < len(dst); i++ {
+			idx := i % keySize
+			s[idx] = append(s[idx], dst[i])
+		}
+
+		key := make([]byte, keySize)
+		sum := 0.0
+
+		for i := 0; i < keySize; i++ {
+			d, err := DecodeSingleByteXor(s[i])
+			if err != nil {
+				return nil, err
+			}
+			sum += d.Rate
+			key[i] = d.Key
+		}
+		sum = sum / float64(keySize)
+
+		if sum > max {
+			theKey = key
+			max = sum
+		}
+	}
+
+	res, err := EncodeWithRepeatingXor(theKey, bytes.NewReader(dst))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode with repeating xor: %v", err)
+	}
+
+	return &DecodeRepeatingXorResult{theKey, res}, nil
 }
 
 func averageHammingDistance(bs []byte, keySize int, ch chan<- hammingDistance, wg *sync.WaitGroup) {

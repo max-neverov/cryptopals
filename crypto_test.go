@@ -1,6 +1,7 @@
 package cryptopals
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/hex"
 	"fmt"
@@ -11,8 +12,8 @@ import (
 
 func TestToBase64(t *testing.T) {
 	base64Tests := []struct {
-		in       string // input
-		expected string // expected result
+		in       string
+		expected string
 	}{
 		{"4d616e", "TWFu"},
 		{"4d61", "TWE="},
@@ -51,7 +52,7 @@ func TestDecodeSingleByteXor(t *testing.T) {
 	}
 	actual, err := DecodeSingleByteXor(in)
 	if err != nil {
-		t.Errorf("Error while decipher %v", err)
+		t.Errorf("Error while decoding %v", err)
 	}
 	expected := []byte("Cooking MC's like a pound of bacon")
 	if !bytes.Equal(actual.Sentence, expected) {
@@ -66,9 +67,9 @@ func TestDetectSingleCharacterXor(t *testing.T) {
 		t.Errorf("Error while open %q: %v", path, err)
 	}
 	defer in.Close()
-	actual, err := DetectSingleCharacterXor(in)
+	actual, err := DecodeSingleCharacterXor(in)
 	if err != nil {
-		t.Errorf("Error while decipher file %q: %v", path, err)
+		t.Errorf("Error while decoding file %q: %v", path, err)
 	}
 	expected := []byte("Now that the party is jumping\n")
 	if !bytes.Equal(actual.Sentence, expected) {
@@ -146,6 +147,60 @@ func TestFindKeySize(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("Expected Key size %d, got %v", tt.expected, sizes)
+		}
+	}
+}
+
+func TestDecodeRepeatingXor(t *testing.T) {
+	path := "resources/challenge6.txt"
+	in, err := os.Open(path)
+	if err != nil {
+		t.Errorf("Error while read %q: %v", path, err)
+	}
+	defer in.Close()
+
+	path = "resources/challenge6_decoded.txt"
+	decoded, err := os.Open(path)
+	if err != nil {
+		t.Errorf("Error while read %q: %v", path, err)
+	}
+	defer decoded.Close()
+
+	scanner := bufio.NewScanner(decoded)
+	split := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		if atEOF && len(data) == 0 {
+			return 0, nil, nil
+		}
+		if i := bytes.IndexByte(data, '\n'); i >= 0 {
+			// We have a full newline-terminated line.
+			return i + 1, data[0 : i+1], nil
+		}
+		// If we're at EOF, we have a final, non-terminated line. Return it.
+		if atEOF {
+			return len(data), data[0 : len(data)-1], nil
+		}
+		// Request more data.
+		return 0, nil, nil
+	}
+	scanner.Split(split)
+	var bs []byte
+	for scanner.Scan() {
+		bs = append(bs, scanner.Bytes()...)
+	}
+
+	actual, err := DecodeRepeatingXor(in)
+	if err != nil {
+		t.Errorf("Error while decode %q: %v", path, err)
+	}
+	expectedKey := []byte("Terminator X: Bring the noise")
+	if !bytes.Equal(actual.Key, expectedKey) {
+		t.Errorf("Wrong decoded key: %q. Expected %q", actual.Key, expectedKey)
+	}
+
+	for i := range bs {
+		if actual.Sentence[i] != bs[i] {
+			t.Errorf("Wrong decoded text: %q\n Expected %q", actual.Sentence, bs)
+			break
 		}
 	}
 }
