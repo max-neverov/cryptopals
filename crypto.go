@@ -361,6 +361,7 @@ func DecodeRepeatingXor(r io.Reader) (*DecodeRepeatingXorResult, error) {
 }
 
 // DecodeAES128ECB decodes text from given reader with given key. Text must be base64 encoded.
+// see https://codereview.appspot.com/7860047/patch/23001/24001
 func DecodeAES128ECB(key []byte, r io.Reader) ([]byte, error) {
 	b, err := aes.NewCipher(key)
 	if err != nil {
