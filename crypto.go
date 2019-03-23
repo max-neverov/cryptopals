@@ -3,6 +3,7 @@ package cryptopals
 import (
 	"bufio"
 	"bytes"
+	"crypto/aes"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -357,6 +358,35 @@ func DecodeRepeatingXor(r io.Reader) (*DecodeRepeatingXorResult, error) {
 	}
 
 	return &DecodeRepeatingXorResult{theKey, res}, nil
+}
+
+// DecodeAES128ECB decodes text from given reader with given key. Text must be base64 encoded.
+func DecodeAES128ECB(key []byte, r io.Reader) ([]byte, error) {
+	b, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cipher block: %v", err)
+	}
+
+	scanner := bufio.NewScanner(r)
+	scanner.Split(bufio.ScanLines)
+	var bs []byte
+	for scanner.Scan() {
+		bs = append(bs, scanner.Bytes()...)
+	}
+	src := make([]byte, base64.StdEncoding.DecodedLen(len(bs)))
+	if _, err := base64.StdEncoding.Decode(src, bs); err != nil {
+		return nil, fmt.Errorf("failed to base64 decode %q: %v", bs, err)
+	}
+
+	lk := len(key)
+	l := len(src)
+	dst := make([]byte, l)
+
+	for i := 0; i < l/lk; i++ {
+		b.Decrypt(dst[i*lk:(i+1)*lk], src[i*lk:(i+1)*lk])
+	}
+
+	return dst, nil
 }
 
 func averageHammingDistance(bs []byte, keySize int, ch chan<- hammingDistance, wg *sync.WaitGroup) {

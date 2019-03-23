@@ -160,12 +160,58 @@ func TestDecodeRepeatingXor(t *testing.T) {
 	defer in.Close()
 
 	path = "resources/challenge6_decoded.txt"
-	decoded, err := os.Open(path)
+	bs, err := readFromFile(path)
+	if err != nil {
+		t.Errorf("Error while decode %q: %v", path, err)
+	}
+
+	actual, err := DecodeRepeatingXor(in)
+	if err != nil {
+		t.Errorf("Error while decode %q: %v", path, err)
+	}
+	expectedKey := []byte("Terminator X: Bring the noise")
+	if !bytes.Equal(actual.Key, expectedKey) {
+		t.Errorf("Wrong decoded key: %q. Expected %q", actual.Key, expectedKey)
+	}
+
+	for i := range bs {
+		if actual.Sentence[i] != bs[i] {
+			t.Errorf("Wrong decoded text: %q\n Expected %q", actual.Sentence, bs)
+			break
+		}
+	}
+}
+
+func TestDecodeAES128ECB(t *testing.T) {
+	path := "resources/challenge7.txt"
+	in, err := os.Open(path)
 	if err != nil {
 		t.Errorf("Error while read %q: %v", path, err)
 	}
-	defer decoded.Close()
+	defer in.Close()
 
+	path = "resources/challenge6_decoded.txt"
+	bs, err := readFromFile(path)
+	if err != nil {
+		t.Errorf("Error while decode %q: %v", path, err)
+	}
+
+	actual, err := DecodeAES128ECB([]byte("YELLOW SUBMARINE"), in)
+	if err != nil {
+		t.Errorf("Errorf while decode AES ECB %v", err)
+	}
+
+	if !strings.HasPrefix(string(actual), string(bs)) {
+		t.Errorf("Wrong decoded text: %q", actual)
+	}
+}
+
+func readFromFile(path string) ([]byte, error) {
+	decoded, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("error while read %q: %v", path, err)
+	}
+	defer decoded.Close()
 	scanner := bufio.NewScanner(decoded)
 	split := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		if atEOF && len(data) == 0 {
@@ -187,20 +233,5 @@ func TestDecodeRepeatingXor(t *testing.T) {
 	for scanner.Scan() {
 		bs = append(bs, scanner.Bytes()...)
 	}
-
-	actual, err := DecodeRepeatingXor(in)
-	if err != nil {
-		t.Errorf("Error while decode %q: %v", path, err)
-	}
-	expectedKey := []byte("Terminator X: Bring the noise")
-	if !bytes.Equal(actual.Key, expectedKey) {
-		t.Errorf("Wrong decoded key: %q. Expected %q", actual.Key, expectedKey)
-	}
-
-	for i := range bs {
-		if actual.Sentence[i] != bs[i] {
-			t.Errorf("Wrong decoded text: %q\n Expected %q", actual.Sentence, bs)
-			break
-		}
-	}
+	return bs, nil
 }
