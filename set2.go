@@ -2,8 +2,8 @@ package cryptopals
 
 import "fmt"
 
-// AddPKCSPadding adds padding to a given keyLen as described https://tools.ietf.org/html/rfc2315#section-10.3
-func AddPKCSPadding(bs []byte, keyLen int) ([]byte, error) {
+// AddPKCS7Padding adds padding to a given keyLen as described https://tools.ietf.org/html/rfc2315#section-10.3
+func AddPKCS7Padding(bs []byte, keyLen int) ([]byte, error) {
 	l := len(bs)
 	p := keyLen % l
 	if p == 0 {

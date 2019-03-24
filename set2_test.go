@@ -6,7 +6,7 @@ import (
 )
 
 func TestAddPKCSPadding(t *testing.T) {
-	actual, err := AddPKCSPadding([]byte("YELLOW SUBMARINE"), 20)
+	actual, err := AddPKCS7Padding([]byte("YELLOW SUBMARINE"), 20)
 	if err != nil {
 		t.Errorf("Failed to add padding: %v", err)
 	}
