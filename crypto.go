@@ -390,6 +390,32 @@ func DecodeAES128ECB(key []byte, r io.Reader) ([]byte, error) {
 	return dst, nil
 }
 
+// DetectAESECB reads from given reader hex encoded line by line and compare bytes of the key size (16).
+// DetectAESECB returns the first line with byte blocks repetitions.
+func DetectAESECB(r io.Reader) ([]byte, error) {
+	scanner := bufio.NewScanner(r)
+	scanner.Split(bufio.ScanLines)
+
+	for scanner.Scan() {
+		bs := scanner.Bytes()
+		dst := make([]byte, hex.DecodedLen(len(bs)))
+		if _, err := hex.Decode(dst, bs); err != nil {
+			return nil, fmt.Errorf("failed to decode %q: %v", bs, err)
+		}
+		l := len(dst)
+		const keyLen = 16
+		for i := 0; i < l/keyLen-1; i++ {
+			key := dst[i*keyLen : (i+1)*keyLen]
+			for j := i + 1; j < l/keyLen-1; j++ {
+				if bytes.Equal(key, dst[j*keyLen:(j+1)*keyLen]) {
+					return bs, nil
+				}
+			}
+		}
+	}
+	return nil, fmt.Errorf("can't detect AES ECB")
+}
+
 func averageHammingDistance(bs []byte, keySize int, ch chan<- hammingDistance, wg *sync.WaitGroup) {
 	defer wg.Done()
 	// - 1 because we compare one keySize bytes with next, so the last comparison will be
