@@ -19,3 +19,18 @@ func AddPKCS7Padding(bs []byte, keyLen int) ([]byte, error) {
 	}
 	return res, nil
 }
+
+// ValidatePKCS7Padding throws a error if PKCS#7 padding is invalid.
+func ValidatePKCS7Padding(bs []byte) error {
+	l := len(bs)
+	p := bs[l-1]
+	if bs[l-int(p)-1] == p {
+		return fmt.Errorf("wrong padding in %q", bs)
+	}
+	for i := l - int(p); i < l; i++ {
+		if bs[i] != p {
+			return fmt.Errorf("wrong padding in %q", bs)
+		}
+	}
+	return nil
+}
