@@ -61,7 +61,7 @@ func TestDecodeSingleByteXor(t *testing.T) {
 }
 
 func TestDetectSingleCharacterXor(t *testing.T) {
-	path := "resources/challenge4.txt"
+	path := "testdata/challenge4.txt"
 	in, err := os.Open(path)
 	if err != nil {
 		t.Errorf("Error while open %q: %v", path, err)
@@ -152,14 +152,14 @@ func TestFindKeySize(t *testing.T) {
 }
 
 func TestDecodeRepeatingXor(t *testing.T) {
-	path := "resources/challenge6.txt"
+	path := "testdata/challenge6.txt"
 	in, err := os.Open(path)
 	if err != nil {
 		t.Errorf("Error while read %q: %v", path, err)
 	}
 	defer in.Close()
 
-	path = "resources/challenge6_decoded.txt"
+	path = "testdata/challenge6_decoded.txt"
 	bs, err := readFromFile(path)
 	if err != nil {
 		t.Errorf("Error while decode %q: %v", path, err)
@@ -183,14 +183,14 @@ func TestDecodeRepeatingXor(t *testing.T) {
 }
 
 func TestDecodeAES128ECB(t *testing.T) {
-	path := "resources/challenge7.txt"
+	path := "testdata/challenge7.txt"
 	in, err := os.Open(path)
 	if err != nil {
 		t.Errorf("Error while read %q: %v", path, err)
 	}
 	defer in.Close()
 
-	path = "resources/challenge6_decoded.txt"
+	path = "testdata/challenge6_decoded.txt"
 	bs, err := readFromFile(path)
 	if err != nil {
 		t.Errorf("Error while decode %q: %v", path, err)
@@ -207,7 +207,7 @@ func TestDecodeAES128ECB(t *testing.T) {
 }
 
 func TestDetectAESECB(t *testing.T) {
-	path := "resources/challenge8.txt"
+	path := "testdata/challenge8.txt"
 	in, err := os.Open(path)
 	if err != nil {
 		t.Errorf("Error while read %q: %v", path, err)
