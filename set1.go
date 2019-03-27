@@ -217,7 +217,6 @@ func EncodeWithRepeatingXor(key []byte, r io.Reader) ([]byte, error) {
 	br := bufio.NewReader(r)
 	var res []byte
 	var keyIdx int
-	lk := len(key)
 	p := make([]byte, 256)
 	for {
 		l, err := br.Read(p)
@@ -230,7 +229,7 @@ func EncodeWithRepeatingXor(key []byte, r io.Reader) ([]byte, error) {
 
 		for i := 0; i < l; i++ {
 			p[i] ^= key[keyIdx]
-			keyIdx = (keyIdx + 1) % lk
+			keyIdx = (keyIdx + 1) % len(key)
 		}
 		res = append(res, p[:l]...)
 	}
@@ -379,12 +378,10 @@ func DecodeAES128ECB(key []byte, r io.Reader) ([]byte, error) {
 		return nil, fmt.Errorf("failed to base64 decode %q: %v", bs, err)
 	}
 
-	lk := len(key)
-	l := len(src)
-	dst := make([]byte, l)
+	dst := make([]byte, len(src))
 
-	for i := 0; i < l/lk; i++ {
-		b.Decrypt(dst[i*lk:(i+1)*lk], src[i*lk:(i+1)*lk])
+	for i := 0; i < len(src)/len(key); i++ {
+		b.Decrypt(dst[i*len(key):(i+1)*len(key)], src[i*len(key):(i+1)*len(key)])
 	}
 
 	return dst, nil
@@ -402,11 +399,11 @@ func DetectAESECB(r io.Reader) ([]byte, error) {
 		if _, err := hex.Decode(dst, bs); err != nil {
 			return nil, fmt.Errorf("failed to decode %q: %v", bs, err)
 		}
-		l := len(dst)
+
 		const keyLen = 16
-		for i := 0; i < l/keyLen-1; i++ {
+		for i := 0; i < len(dst)/keyLen-1; i++ {
 			key := dst[i*keyLen : (i+1)*keyLen]
-			for j := i + 1; j < l/keyLen-1; j++ {
+			for j := i + 1; j < len(dst)/keyLen-1; j++ {
 				if bytes.Equal(key, dst[j*keyLen:(j+1)*keyLen]) {
 					return bs, nil
 				}
