@@ -7,13 +7,23 @@ import (
 )
 
 func TestAddPKCSPadding(t *testing.T) {
-	actual, err := AddPKCS7Padding([]byte("YELLOW SUBMARINE"), 20)
-	if err != nil {
-		t.Errorf("Failed to add padding: %v", err)
+	testData := []struct {
+		keyLen   int
+		expected string
+	}{
+		{20, "YELLOW SUBMARINE\x04\x04\x04\x04"},
+		{16, "YELLOW SUBMARINE\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10"},
+		{10, "YELLOW SUBMARINE\x04\x04\x04\x04"},
 	}
-	expected := "YELLOW SUBMARINE\x04\x04\x04\x04"
-	if !bytes.Equal(actual, []byte(expected)) {
-		t.Errorf("Wrong padding: %q, expected %q", actual, expected)
+
+	for _, tt := range testData {
+		actual, err := AddPKCS7Padding([]byte("YELLOW SUBMARINE"), tt.keyLen)
+		if err != nil {
+			t.Errorf("Failed to add padding: %v", err)
+		}
+		if !bytes.Equal(actual, []byte(tt.expected)) {
+			t.Errorf("Wrong padding: %q, expected %q", actual, tt.expected)
+		}
 	}
 }
 
