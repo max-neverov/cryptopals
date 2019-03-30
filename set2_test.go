@@ -47,7 +47,7 @@ func TestValidatePKCS7Padding(t *testing.T) {
 	}
 }
 
-func TestEncodeAESCBC(t *testing.T) {
+func TestDecodeAESCBC(t *testing.T) {
 	path := "testdata/challenge10.txt"
 
 	file, err := ioutil.ReadFile(path)
@@ -67,4 +67,22 @@ func TestEncodeAESCBC(t *testing.T) {
 		t.Error(err)
 	}
 	fmt.Printf("%s", actual)
+}
+
+func TestEncodeAESCBC(t *testing.T) {
+	expected := []byte("This is the test1234567890......")
+	iv := make([]byte, 16)
+	key := []byte("YELLOW SUBMARINE")
+
+	encoded, err := EncodeAESCBC(expected, iv, key)
+	if err != nil {
+		t.Error(err)
+	}
+	actual, err := DecodeAESCBC(encoded, iv, key)
+	if err != nil {
+		t.Error(err)
+	}
+	if !bytes.Equal(actual, expected) {
+		t.Errorf("expected %q, actual %q", expected, actual)
+	}
 }

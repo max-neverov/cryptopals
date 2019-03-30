@@ -60,3 +60,27 @@ func DecodeAESCBC(bs, iv, key []byte) ([]byte, error) {
 	}
 	return res, nil
 }
+
+func EncodeAESCBC(bs, iv, key []byte) ([]byte, error) {
+	if len(iv) != len(key) {
+		return nil, fmt.Errorf("EncodeAESCBC: iv size (%d) should be the same as key size (%d)", len(iv), len(key))
+	}
+
+	b, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("EncodeAESCBC: failed to create cipher: %v", err)
+	}
+
+	prev := iv
+	res := make([]byte, len(bs))
+
+	for i := 0; i < len(bs); i += len(key) {
+		tmp, err := EncodeWithRepeatingXor(prev, bs[i:i+len(key)])
+		if err != nil {
+			return nil, fmt.Errorf("EncodeAESCBC: failed to xor: %v", err)
+		}
+		b.Encrypt(res[i:], tmp)
+		prev = res[i : i+len(key)]
+	}
+	return res, nil
+}
