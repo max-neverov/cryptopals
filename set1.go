@@ -213,25 +213,10 @@ func DecodeSingleCharacterXor(r io.Reader) (*DecodeSingleByteXorResult, error) {
 // EncodeWithRepeatingXor reads from given reader by chunks of length 256 and returns encoded
 // bytes with circular repeating xor with given key.
 // EncodeWithRepeatingXor encodes all characters including non printing like '\n'.
-func EncodeWithRepeatingXor(key []byte, r io.Reader) ([]byte, error) {
-	br := bufio.NewReader(r)
-	var res []byte
-	var keyIdx int
-	p := make([]byte, 256)
-	for {
-		l, err := br.Read(p)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		for i := 0; i < l; i++ {
-			p[i] ^= key[keyIdx]
-			keyIdx = (keyIdx + 1) % len(key)
-		}
-		res = append(res, p[:l]...)
+func EncodeWithRepeatingXor(key []byte, bs []byte) ([]byte, error) {
+	res := make([]byte, len(bs))
+	for i := 0; i < len(bs); i++ {
+		res[i] = bs[i] ^ key[i%len(key)]
 	}
 
 	return res, nil
@@ -351,7 +336,7 @@ func DecodeRepeatingXor(r io.Reader) (*DecodeRepeatingXorResult, error) {
 		}
 	}
 
-	res, err := EncodeWithRepeatingXor(theKey, bytes.NewReader(dst))
+	res, err := EncodeWithRepeatingXor(theKey, dst)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode with repeating xor: %v", err)
 	}
@@ -381,7 +366,7 @@ func DecodeAES128ECB(key []byte, r io.Reader) ([]byte, error) {
 	dst := make([]byte, len(src))
 
 	for i := 0; i < len(src)/len(key); i++ {
-		b.Decrypt(dst[i*len(key):(i+1)*len(key)], src[i*len(key):(i+1)*len(key)])
+		b.Decrypt(dst[i*len(key):], src[i*len(key):(i+1)*len(key)])
 	}
 
 	return dst, nil

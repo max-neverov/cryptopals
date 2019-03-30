@@ -1,7 +1,6 @@
 package cryptopals
 
 import (
-	"bytes"
 	"crypto/aes"
 	"fmt"
 )
@@ -50,10 +49,9 @@ func DecodeAESCBC(bs, iv, key []byte) ([]byte, error) {
 	res := make([]byte, len(bs))
 	tmp := make([]byte, len(key))
 
-	fmt.Println(len(bs))
 	for i := 0; i < len(bs); i += len(key) {
 		b.Decrypt(tmp, bs[i:])
-		tmp, err := EncodeWithRepeatingXor(prev, bytes.NewReader(tmp))
+		tmp, err := EncodeWithRepeatingXor(prev, tmp)
 		if err != nil {
 			return nil, fmt.Errorf("DecodeAESCBC: failed to xor: %v", err)
 		}

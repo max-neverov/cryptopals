@@ -80,7 +80,7 @@ func TestDetectSingleCharacterXor(t *testing.T) {
 func TestEncodeWithRepeatingXor(t *testing.T) {
 	in := fmt.Sprintf("Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal")
 
-	actual, err := EncodeWithRepeatingXor([]byte("ICE"), strings.NewReader(in))
+	actual, err := EncodeWithRepeatingXor([]byte("ICE"), []byte(in))
 	if err != nil {
 		t.Errorf("Error while encoding: %v", err)
 	}
@@ -111,7 +111,7 @@ func TestFindKeySize(t *testing.T) {
 	s1 := fmt.Sprintf("Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal")
 
 	key1 := []byte("ICE")
-	in1, err := EncodeWithRepeatingXor(key1, strings.NewReader(s1))
+	in1, err := EncodeWithRepeatingXor(key1, []byte(s1))
 	if err != nil {
 		t.Errorf("Error while encoding: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestFindKeySize(t *testing.T) {
 	s2 := fmt.Sprintf("This is. A random\ntest string. Random English, sentence because I said so")
 
 	key2 := []byte("Random")
-	in2, err := EncodeWithRepeatingXor(key2, strings.NewReader(s2))
+	in2, err := EncodeWithRepeatingXor(key2, []byte(s2))
 	if err != nil {
 		t.Errorf("Error while encoding: %v", err)
 	}
