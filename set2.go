@@ -1,6 +1,10 @@
 package cryptopals
 
-import "fmt"
+import (
+	"bytes"
+	"crypto/aes"
+	"fmt"
+)
 
 // AddPKCS7Padding adds padding to a given keyLen as described https://tools.ietf.org/html/rfc2315#section-10.3
 func AddPKCS7Padding(bs []byte, keyLen int) ([]byte, error) {
@@ -30,4 +34,31 @@ func ValidatePKCS7Padding(bs []byte) error {
 		}
 	}
 	return nil
+}
+
+func DecodeAESCBC(bs, iv, key []byte) ([]byte, error) {
+	if len(iv) != len(key) {
+		return nil, fmt.Errorf("DecodeAESCBC: iv size (%d) should be the same as key size (%d)", len(iv), len(key))
+	}
+
+	b, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("DecodeAESCBC: failed to create cipher: %v", err)
+	}
+
+	prev := iv
+	res := make([]byte, len(bs))
+	tmp := make([]byte, len(key))
+
+	fmt.Println(len(bs))
+	for i := 0; i < len(bs); i += len(key) {
+		b.Decrypt(tmp, bs[i:])
+		tmp, err := EncodeWithRepeatingXor(prev, bytes.NewReader(tmp))
+		if err != nil {
+			return nil, fmt.Errorf("DecodeAESCBC: failed to xor: %v", err)
+		}
+		copy(res[i:], tmp)
+		prev = bs[i : i+len(key)]
+	}
+	return res, nil
 }

@@ -2,7 +2,9 @@ package cryptopals
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"testing"
 )
 
@@ -43,4 +45,26 @@ func TestValidatePKCS7Padding(t *testing.T) {
 			t.Error(actual)
 		}
 	}
+}
+
+func TestEncodeAESCBC(t *testing.T) {
+	path := "testdata/challenge10.txt"
+
+	file, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Errorf("Failed to read the file %v", err)
+	}
+	src := make([]byte, base64.StdEncoding.DecodedLen(len(file)))
+	_, err = base64.StdEncoding.Decode(src, file)
+	if err != nil {
+		t.Errorf("Failed to decode file %v", err)
+	}
+
+	iv := make([]byte, 16)
+	key := []byte("YELLOW SUBMARINE")
+	actual, err := DecodeAESCBC(src, iv, key)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Printf("%s", actual)
 }
