@@ -2,7 +2,9 @@ package cryptopals
 
 import (
 	"crypto/aes"
+	"crypto/rand"
 	"fmt"
+	"math/big"
 )
 
 // AddPKCS7Padding adds padding to a given keyLen as described https://tools.ietf.org/html/rfc2315#section-10.3
@@ -24,7 +26,8 @@ func AddPKCS7Padding(bs []byte, keyLen int) ([]byte, error) {
 func ValidatePKCS7Padding(bs []byte) error {
 	l := len(bs)
 	p := bs[l-1]
-	if bs[l-int(p)-1] == p {
+	if bs[l-int(p)] != p {
+		fmt.Printf("l=%d,p=%d,bs=%d, %c\n", l, p, bs[l-int(p)-1], bs[l-int(p)-1])
 		return fmt.Errorf("wrong padding in %q", bs)
 	}
 	for i := l - int(p); i < l; i++ {
@@ -81,6 +84,76 @@ func EncodeAESCBC(bs, iv, key []byte) ([]byte, error) {
 		}
 		b.Encrypt(res[i:], tmp)
 		prev = res[i : i+len(key)]
+	}
+	return res, nil
+}
+
+func encryptionOracle(bs []byte) ([]byte, int64, error) {
+	paddedText, err := obfuscateWithRandomPrefixAndSuffixAndPad(bs)
+	if err != nil {
+		return nil, -1, err
+	}
+
+	key, err := getNToMRandomBytes(aes.BlockSize, aes.BlockSize)
+	if err != nil {
+		return nil, -1, err
+	}
+
+	d, err := rand.Int(rand.Reader, big.NewInt(2))
+	if err != nil {
+		return nil, -1, fmt.Errorf("encryptionOracle: failed to roll dice: %v", err)
+	}
+	var encodedText []byte
+	switch d.Int64() {
+	case 0:
+		//ECB
+		encodedText, err = encodeAESECB(key, paddedText)
+		if err != nil {
+			return nil, -1, err
+		}
+	case 1:
+		//CBC
+		iv, err := getNToMRandomBytes(aes.BlockSize, aes.BlockSize)
+		if err != nil {
+			return nil, -1, err
+		}
+		encodedText, err = EncodeAESCBC(bs, iv, key)
+		if err != nil {
+			return nil, -1, err
+		}
+	}
+
+	return encodedText, d.Int64(), nil
+}
+
+func obfuscateWithRandomPrefixAndSuffixAndPad(bs []byte) ([]byte, error) {
+	prefix, err := getNToMRandomBytes(5, 10)
+	if err != nil {
+		return nil, err
+	}
+	suffix, err := getNToMRandomBytes(5, 10)
+	if err != nil {
+		return nil, err
+	}
+	text := append(append(prefix, bs...), suffix...)
+	paddedText, err := AddPKCS7Padding(text, aes.BlockSize)
+	if err != nil {
+		return nil, err
+	}
+	if err = ValidatePKCS7Padding(paddedText); err != nil {
+		return nil, err
+	}
+	return paddedText, nil
+}
+
+func getNToMRandomBytes(n, m int64) ([]byte, error) {
+	l, err := rand.Int(rand.Reader, big.NewInt(int64(m-n+1)))
+	if err != nil {
+		return nil, fmt.Errorf("getNToMRandomBytes: %v", err)
+	}
+	res := make([]byte, n+l.Int64())
+	if _, err = rand.Read(res); err != nil {
+		return nil, fmt.Errorf("getNToMRandomBytes: %v", err)
 	}
 	return res, nil
 }

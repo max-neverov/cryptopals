@@ -86,3 +86,19 @@ func TestEncodeAESCBC(t *testing.T) {
 		t.Errorf("expected %q, actual %q", expected, actual)
 	}
 }
+
+func TestDetectionOracle(t *testing.T) {
+	// at least 2 equal blocks of 16 bytes to detect ECB
+	in := bytes.Repeat([]byte("YELLOW SUBMARINE"), 2)
+	for i := 0; i < 1000; i++ {
+		enc, mode, err := encryptionOracle(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if detectAESECB(enc) {
+			if mode != 0 {
+				t.Errorf("mode detected as ECB, but was encoded as CBC")
+			}
+		}
+	}
+}
