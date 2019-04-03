@@ -196,7 +196,7 @@ func TestDecodeAES128ECB(t *testing.T) {
 		t.Errorf("Error while decode %q: %v", path, err)
 	}
 
-	actual, err := DecodeAES128ECB([]byte("YELLOW SUBMARINE"), in)
+	actual, err := DecodeAESECB([]byte("YELLOW SUBMARINE"), in)
 	if err != nil {
 		t.Errorf("Errorf while decode AES ECB %v", err)
 	}

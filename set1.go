@@ -2,7 +2,6 @@ package cryptopals
 
 import (
 	"bufio"
-	"bytes"
 	"crypto/aes"
 	"encoding/base64"
 	"encoding/hex"
@@ -344,9 +343,9 @@ func DecodeRepeatingXor(r io.Reader) (*DecodeRepeatingXorResult, error) {
 	return &DecodeRepeatingXorResult{theKey, res}, nil
 }
 
-// DecodeAES128ECB decodes text from given reader with given key. Text must be base64 encoded.
+// DecodeAESECB decodes text from given reader with given key. Text must be base64 encoded.
 // see https://codereview.appspot.com/7860047/patch/23001/24001
-func DecodeAES128ECB(key []byte, r io.Reader) ([]byte, error) {
+func DecodeAESECB(key []byte, r io.Reader) ([]byte, error) {
 	b, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cipher block: %v", err)
@@ -372,6 +371,18 @@ func DecodeAES128ECB(key []byte, r io.Reader) ([]byte, error) {
 	return dst, nil
 }
 
+func encodeAESECB(key, bs []byte) ([]byte, error) {
+	b, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("encodeAESECB: failed to create cipher block: %v", err)
+	}
+	dst := make([]byte, len(bs))
+	for i := 0; i < len(bs)/len(key); i++ {
+		b.Encrypt(dst[i*len(key):], bs[i*len(key):(i+1)*len(key)])
+	}
+	return dst, nil
+}
+
 // DetectAESECB reads from given reader hex encoded line by line and compare bytes of the key size (16).
 // DetectAESECB returns the first line with byte blocks repetitions.
 func DetectAESECB(r io.Reader) ([]byte, error) {
@@ -385,17 +396,23 @@ func DetectAESECB(r io.Reader) ([]byte, error) {
 			return nil, fmt.Errorf("failed to decode %q: %v", bs, err)
 		}
 
-		const keyLen = 16
-		for i := 0; i < len(dst)/keyLen-1; i++ {
-			key := dst[i*keyLen : (i+1)*keyLen]
-			for j := i + 1; j < len(dst)/keyLen-1; j++ {
-				if bytes.Equal(key, dst[j*keyLen:(j+1)*keyLen]) {
-					return bs, nil
-				}
-			}
+		if detectAESECB(dst) {
+			return bs, nil
 		}
 	}
 	return nil, fmt.Errorf("can't detect AES ECB")
+}
+
+func detectAESECB(bs []byte) bool {
+	blocks := make(map[string]struct{})
+	for i := 0; i < len(bs); i += aes.BlockSize {
+		block := bs[i : i+aes.BlockSize]
+		if _, ok := blocks[string(block)]; ok {
+			return true
+		}
+		blocks[string(block)] = struct{}{}
+	}
+	return false
 }
 
 func averageHammingDistance(bs []byte, keySize int, ch chan<- hammingDistance, wg *sync.WaitGroup) {
