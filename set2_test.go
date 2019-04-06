@@ -2,6 +2,7 @@ package cryptopals
 
 import (
 	"bytes"
+	"crypto/aes"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -100,5 +101,26 @@ func TestDetectionOracle(t *testing.T) {
 				t.Errorf("mode detected as ECB, but was encoded as CBC")
 			}
 		}
+	}
+}
+
+func TestFindECBKeySize(t *testing.T) {
+	key := []byte("YELLOW SUBMARINE")
+	bs := []byte("this is a random test string of unknown size")
+	paddedText, err := AddPKCS7Padding(bs, aes.BlockSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	encodedText, err := encodeAESECB(key, paddedText)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keySize, err := findECBKeySize(encodedText)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if keySize != len(key) {
+		t.Errorf("expected key size %d, got %d", len(key), keySize)
 	}
 }

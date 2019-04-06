@@ -157,7 +157,7 @@ func DecodeSingleByteXor(bs []byte) (*DecodeSingleByteXorResult, error) {
 		ch <- DecodeSingleByteXorResult{fr, in, key}
 	}
 
-	for i := 32; i < 127; i++ {
+	for i := 0; i < 256; i++ {
 		wg.Add(1)
 		go decode(append(bs[:0:0], bs...), byte(i))
 	}

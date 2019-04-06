@@ -171,11 +171,11 @@ func findECBKeySize(textToDecode []byte) (int, error) {
 		}
 		if detectAESECB(encodedText) {
 			keySize = i / 2
-			fmt.Println(keySize)
+			break
 		}
 	}
 	if keySize == -1 {
-		return -1, fmt.Errorf("decodeECBByteAtATime: failed to detect keySize")
+		return -1, fmt.Errorf("findECBKeySize: failed to detect keySize")
 	}
 	return keySize, nil
 }
