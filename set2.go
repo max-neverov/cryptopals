@@ -1,6 +1,7 @@
 package cryptopals
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/rand"
 	"fmt"
@@ -192,4 +193,49 @@ func encodeECBWithSuffixAndKey(bs, suffix, key []byte) ([]byte, error) {
 		return nil, err
 	}
 	return encodedText, nil
+}
+
+func decodeECBByteAtATime(textToDecode []byte) ([]byte, error) {
+	keySize, err := findECBKeySize(textToDecode)
+	if err != nil {
+		return nil, err
+	}
+
+	s := bytes.Repeat([]byte{'A'}, keySize)
+	for i := keySize; i > 0; i-- {
+		b, err := findByteAtIndex(i, textToDecode, s)
+		if err != nil {
+			return nil, err
+		}
+		if i == 1 {
+			s = append(s[:keySize-1], b)
+		} else {
+			s = append(s[1:keySize-1], b, 'A')
+		}
+	}
+	return s, nil
+}
+
+func findByteAtIndex(k int, textToDecode, s []byte) (byte, error) {
+	l := len(s)
+	m := make(map[string]byte)
+	for i := 0; i < 256; i++ {
+		s[l-1] = byte(i)
+		encodedText, err := encodeECBWithSuffixAndKey(s, textToDecode, randomKey)
+		if err != nil {
+			return 0, err
+		}
+		m[string(encodedText[:l])] = byte(i)
+	}
+
+	encodedText, err := encodeECBWithSuffixAndKey(s[:k-1], textToDecode, randomKey)
+	if err != nil {
+		return 0, err
+	}
+	v, ok := m[string(encodedText[:l])]
+
+	if !ok {
+		return 0, fmt.Errorf("failed to decode 16-th byte of %q", s)
+	}
+	return v, nil
 }

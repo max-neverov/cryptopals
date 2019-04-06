@@ -124,3 +124,23 @@ func TestFindECBKeySize(t *testing.T) {
 		t.Errorf("expected key size %d, got %d", len(key), keySize)
 	}
 }
+
+func TestDecodeECBByteAtATime(t *testing.T) {
+	path := "testdata/challenge12.txt"
+
+	file, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read file %q: %v", path, err)
+	}
+	src := make([]byte, base64.StdEncoding.DecodedLen(len(file)))
+	_, err = base64.StdEncoding.Decode(src, file)
+	if err != nil {
+		t.Fatalf("failed to decode file %q: %v", path, err)
+	}
+
+	decoded, err := decodeECBByteAtATime(src)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Printf("decoded %q", decoded)
+}
