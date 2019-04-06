@@ -7,6 +7,8 @@ import (
 	"math/big"
 )
 
+var randomKey = []byte{43, 225, 166, 6, 178, 106, 163, 61, 40, 109, 171, 236, 72, 222, 188, 142}
+
 // AddPKCS7Padding adds padding to a given keyLen as described https://tools.ietf.org/html/rfc2315#section-10.3
 func AddPKCS7Padding(bs []byte, keyLen int) ([]byte, error) {
 	p := keyLen - len(bs)%keyLen
@@ -156,4 +158,38 @@ func getNToMRandomBytes(n, m int64) ([]byte, error) {
 		return nil, fmt.Errorf("getNToMRandomBytes: %v", err)
 	}
 	return res, nil
+}
+
+func findECBKeySize(textToDecode []byte) (int, error) {
+	bs := make([]byte, 0)
+	keySize := -1
+	for i := 1; i < 512; i++ {
+		bs = append(bs, 'A')
+		encodedText, err := encodeECBWithSuffixAndKey(bs, textToDecode, randomKey)
+		if err != nil {
+			return -1, err
+		}
+		if detectAESECB(encodedText) {
+			keySize = i / 2
+			fmt.Println(keySize)
+		}
+	}
+	if keySize == -1 {
+		return -1, fmt.Errorf("decodeECBByteAtATime: failed to detect keySize")
+	}
+	return keySize, nil
+}
+
+func encodeECBWithSuffixAndKey(bs, suffix, key []byte) ([]byte, error) {
+	bs = append(bs, suffix...)
+	paddedText, err := AddPKCS7Padding(bs, aes.BlockSize)
+	if err != nil {
+		return nil, err
+	}
+
+	encodedText, err := encodeAESECB(key, paddedText)
+	if err != nil {
+		return nil, err
+	}
+	return encodedText, nil
 }
