@@ -137,10 +137,9 @@ func TestDecodeECBByteAtATime(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to decode file %q: %v", path, err)
 	}
-
 	decoded, err := decodeECBByteAtATime(src)
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Printf("decoded %q", decoded)
+	fmt.Printf("decoded: %q", decoded)
 }

@@ -201,19 +201,26 @@ func decodeECBByteAtATime(textToDecode []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	s := bytes.Repeat([]byte{'A'}, keySize)
-	for i := keySize; i > 0; i-- {
-		b, err := findByteAtIndex(i, textToDecode, s)
-		if err != nil {
-			return nil, err
-		}
-		if i == 1 {
-			s = append(s[:keySize-1], b)
-		} else {
-			s = append(s[1:keySize-1], b, 'A')
+	var res []byte
+
+	for j := 0; j < len(textToDecode); j += keySize {
+		s := bytes.Repeat([]byte{'A'}, keySize)
+		for i := keySize; i > 0; i-- {
+			b, err := findByteAtIndex(i, textToDecode[j:], s)
+			if err != nil {
+				return nil, err
+			}
+			if i == 1 {
+				res = append(res, append(s[:keySize-1], b)...)
+			} else if keySize-i+1+j == len(textToDecode) {
+				res = append(res, append(s[i-1:keySize-1], b)...)
+				break
+			} else {
+				s = append(s[1:keySize-1], b, 'A')
+			}
 		}
 	}
-	return s, nil
+	return res, nil
 }
 
 func findByteAtIndex(k int, textToDecode, s []byte) (byte, error) {
