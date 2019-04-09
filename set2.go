@@ -204,26 +204,25 @@ func decodeECBByteAtATime(textToDecode []byte) ([]byte, error) {
 	var res []byte
 
 	for j := 0; j < len(textToDecode); j += keySize {
-		s := bytes.Repeat([]byte{'A'}, keySize)
-		for i := keySize; i > 0; i-- {
-			b, err := findByteAtIndex(i, textToDecode[j:], s)
+		s := append(append(bytes.Repeat([]byte{'A'}, keySize), res...), 'A')
+		s = s[len(s)-keySize:]
+		d := 0
+		for i := keySize; i > 0 && j+(keySize-i) < len(textToDecode); i-- {
+			b, err := findByteAtIndex(j+d, i, textToDecode, s)
 			if err != nil {
 				return nil, err
 			}
-			if i == 1 {
-				res = append(res, append(s[:keySize-1], b)...)
-			} else if keySize-i+1+j == len(textToDecode) {
-				res = append(res, append(s[i-1:keySize-1], b)...)
-				break
-			} else {
-				s = append(s[1:keySize-1], b, 'A')
-			}
+
+			res = append(res, b)
+			s = append(s[1:keySize-1], b, 'A')
 		}
+		d = keySize
 	}
+
 	return res, nil
 }
 
-func findByteAtIndex(k int, textToDecode, s []byte) (byte, error) {
+func findByteAtIndex(skip, idx int, textToDecode, s []byte) (byte, error) {
 	l := len(s)
 	m := make(map[string]byte)
 	for i := 0; i < 256; i++ {
@@ -234,13 +233,14 @@ func findByteAtIndex(k int, textToDecode, s []byte) (byte, error) {
 		}
 		m[string(encodedText[:l])] = byte(i)
 	}
+	dst := make([]byte, idx-1)
+	copy(dst, s[:idx-1])
+	encodedText, err := encodeECBWithSuffixAndKey(dst, textToDecode, randomKey)
 
-	encodedText, err := encodeECBWithSuffixAndKey(s[:k-1], textToDecode, randomKey)
 	if err != nil {
 		return 0, err
 	}
-	v, ok := m[string(encodedText[:l])]
-
+	v, ok := m[string(encodedText[skip:skip+l])]
 	if !ok {
 		return 0, fmt.Errorf("failed to decode 16-th byte of %q", s)
 	}
